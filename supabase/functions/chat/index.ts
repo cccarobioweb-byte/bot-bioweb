@@ -47,6 +47,12 @@ interface ChatRequest {
   }
   isTranslationRequest?: boolean
   translationPrompt?: string
+  source?: string // 'web' o 'whatsapp'
+  userInfo?: {
+    id: string
+    name: string
+    phone: string
+  }
 }
 
 function buildChatPrompt(
