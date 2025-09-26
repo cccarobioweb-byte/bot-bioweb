@@ -37,13 +37,23 @@ export class FastChatService {
         return []
       }
 
-      // Filtrar resultados basado en relevancia
+      // Filtrar resultados basado en relevancia (incluyendo JSON y tags)
       const relevantProducts = data.filter(product => {
+        // Crear texto de búsqueda completo incluyendo JSON
         const searchText = [
           product.name || '',
           product.description || '',
-          product.category || '',
-          ...(product.tags || [])
+          product.categoria || '',
+          ...(product.tags || []),
+          // Incluir datos del JSON product_data
+          ...(product.product_data ? [
+            product.product_data.titulo || '',
+            product.product_data.marca || '',
+            product.product_data.modelo || '',
+            ...(product.product_data.caracteristicas || []),
+            ...(product.product_data.articulos_requeridos || []),
+            ...(product.product_data.articulos_opcionales || [])
+          ] : [])
         ].join(' ').toLowerCase()
 
         // Verificar si alguna palabra clave coincide
@@ -51,19 +61,46 @@ export class FastChatService {
           const keywordLower = keyword.toLowerCase()
           return searchText.includes(keywordLower) ||
                  product.name.toLowerCase().includes(keywordLower) ||
-                 (product.category && product.category.toLowerCase().includes(keywordLower)) ||
-                 (product.tags && product.tags.some(tag => tag.toLowerCase().includes(keywordLower)))
+                 (product.categoria && product.categoria.toLowerCase().includes(keywordLower)) ||
+                 (product.tags && product.tags.some(tag => tag.toLowerCase().includes(keywordLower))) ||
+                 // Buscar en JSON product_data
+                 (product.product_data && (
+                   (product.product_data.titulo && product.product_data.titulo.toLowerCase().includes(keywordLower)) ||
+                   (product.product_data.marca && product.product_data.marca.toLowerCase().includes(keywordLower)) ||
+                   (product.product_data.modelo && product.product_data.modelo.toLowerCase().includes(keywordLower)) ||
+                   (product.product_data.caracteristicas && product.product_data.caracteristicas.some(c => c.toLowerCase().includes(keywordLower))) ||
+                   (product.product_data.articulos_requeridos && product.product_data.articulos_requeridos.some(a => a.toLowerCase().includes(keywordLower))) ||
+                   (product.product_data.articulos_opcionales && product.product_data.articulos_opcionales.some(a => a.toLowerCase().includes(keywordLower)))
+                 ))
         })
       })
 
       // Ordenar por relevancia (más coincidencias primero)
       relevantProducts.sort((a, b) => {
-        const aMatches = keywords.filter(keyword => 
-          `${a.name} ${a.description}`.toLowerCase().includes(keyword)
-        ).length
-        const bMatches = keywords.filter(keyword => 
-          `${b.name} ${b.description}`.toLowerCase().includes(keyword)
-        ).length
+        // Función para contar coincidencias en un producto
+        const countMatches = (product) => {
+          const searchText = [
+            product.name || '',
+            product.description || '',
+            product.categoria || '',
+            ...(product.tags || []),
+            ...(product.product_data ? [
+              product.product_data.titulo || '',
+              product.product_data.marca || '',
+              product.product_data.modelo || '',
+              ...(product.product_data.caracteristicas || []),
+              ...(product.product_data.articulos_requeridos || []),
+              ...(product.product_data.articulos_opcionales || [])
+            ] : [])
+          ].join(' ').toLowerCase()
+          
+          return keywords.filter(keyword => 
+            searchText.includes(keyword.toLowerCase())
+          ).length
+        }
+        
+        const aMatches = countMatches(a)
+        const bMatches = countMatches(b)
         return bMatches - aMatches
       })
       

@@ -10,8 +10,8 @@ const corsHeaders = {
 async function generateWhatsAppResponse(userMessage: string, products: any[], brandInfo: any[]): Promise<string> {
   const messageLower = userMessage.toLowerCase().trim()
   
-  // Detectar saludos simples
-  const isGreeting = (
+  // Detectar saludos simples (solo si es EXACTAMENTE un saludo)
+  const isSimpleGreeting = (
     messageLower === 'hola' ||
     messageLower === 'hi' ||
     messageLower === 'hello' ||
@@ -27,7 +27,7 @@ async function generateWhatsAppResponse(userMessage: string, products: any[], br
     messageLower === '¿'
   )
   
-  if (isGreeting) {
+  if (isSimpleGreeting) {
     if (messageLower.includes('hola') || messageLower.includes('hi') || messageLower.includes('hello')) {
       return "*¡Hola!* Soy tu asistente de equipos técnicos. ¿Qué necesitas?"
     }
@@ -40,21 +40,35 @@ async function generateWhatsAppResponse(userMessage: string, products: any[], br
     return "¿En qué puedo ayudarte con *equipos de medición*?"
   }
   
-  // Detectar consultas de productos específicos
+  // Si hay productos encontrados, analizar la consulta específica
   if (products.length > 0) {
-    const product = products[0]
-    const productName = product.name || 'Producto'
-    const category = product.categoria || 'equipo'
+    // Buscar productos que coincidan mejor con la consulta
+    const queryWords = messageLower.split(' ').filter(word => word.length > 2)
+    let bestMatch = products[0] // Producto por defecto
     
-    // Respuesta ultra-corta para WhatsApp
+    // Buscar coincidencias en nombre, categoría o descripción
+    for (const product of products) {
+      const productText = `${product.name || ''} ${product.categoria || ''} ${product.description || ''}`.toLowerCase()
+      const matches = queryWords.filter(word => productText.includes(word))
+      if (matches.length > 0) {
+        bestMatch = product
+        break
+      }
+    }
+    
+    const productName = bestMatch.name || 'Producto'
+    const category = bestMatch.categoria || 'equipo'
+    
+    // Respuesta específica basada en la consulta
     if (products.length === 1) {
       return `*${productName}* - ${category}. ¿Quieres saber más detalles?`
     } else {
-      return `Tenemos *${products.length} opciones*. ¿Para qué aplicación específica?`
+      // Si hay múltiples productos, mencionar el más relevante
+      return `*${productName}* y ${products.length - 1} opciones más. ¿Para qué aplicación específica?`
     }
   }
   
-  // Sin productos encontrados
+  // Sin productos encontrados - respuesta más específica
   return "No tenemos productos para esa aplicación. ¿Qué *otra cosa* necesitas?"
 }
 
@@ -117,6 +131,7 @@ serve(async (req) => {
 
     // Crear prompt específico para WhatsApp (respuestas cortas)
     const whatsappResponse = await generateWhatsAppResponse(userMessage, products || [], brandInfo || [])
+    console.log('🤖 Respuesta WhatsApp generada:', whatsappResponse)
     
     // Si no se puede generar respuesta específica, usar chat normal
     let botResponse = whatsappResponse

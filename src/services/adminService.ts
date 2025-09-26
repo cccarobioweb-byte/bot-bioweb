@@ -103,6 +103,21 @@ export class AdminService {
         throw new Error('Supabase no está configurado')
       }
 
+      // Verificar si ya existe un producto con el mismo nombre
+      const { data: existingProduct, error: checkError } = await supabase
+        .from('products')
+        .select('id, name')
+        .ilike('name', productData.name)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        throw new Error('Error verificando productos existentes')
+      }
+
+      if (existingProduct) {
+        throw new Error(`Ya existe un producto con el nombre "${productData.name}". Por favor, usa un nombre diferente.`)
+      }
+
       // Preparar datos con estructura JSON por defecto
       const { product_data, tags, ...basicData } = productData
       const defaultProductData = {
