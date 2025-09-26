@@ -71,16 +71,74 @@ function buildChatPrompt(
   // Detectar tipo de consulta con análisis de contexto
   const queryLower = userQuery.toLowerCase()
   
-  // Detectar saludos simples
+  // Detectar saludos simples y frases de cortesía (optimizado para ahorrar tokens)
   const isSimpleGreeting = (
+    // Saludos básicos
     queryLower === 'hola' ||
     queryLower === 'hi' ||
     queryLower === 'hello' ||
+    queryLower === 'hey' ||
+    queryLower === 'saludos' ||
+    
+    // Saludos con tiempo
     queryLower === 'buenos días' ||
     queryLower === 'buenas tardes' ||
     queryLower === 'buenas noches' ||
-    queryLower === 'saludos' ||
-    queryLower === 'hey'
+    queryLower === 'buen día' ||
+    queryLower === 'buena tarde' ||
+    queryLower === 'buena noche' ||
+    
+    // Despedidas
+    queryLower === 'adiós' ||
+    queryLower === 'adios' ||
+    queryLower === 'bye' ||
+    queryLower === 'goodbye' ||
+    queryLower === 'hasta luego' ||
+    queryLower === 'nos vemos' ||
+    queryLower === 'chao' ||
+    queryLower === 'chau' ||
+    
+    // Agradecimientos
+    queryLower === 'gracias' ||
+    queryLower === 'thank you' ||
+    queryLower === 'thanks' ||
+    queryLower === 'muchas gracias' ||
+    queryLower === 'de nada' ||
+    queryLower === 'you\'re welcome' ||
+    
+    // Frases de cortesía
+    queryLower === 'por favor' ||
+    queryLower === 'please' ||
+    queryLower === 'disculpa' ||
+    queryLower === 'perdón' ||
+    queryLower === 'sorry' ||
+    queryLower === 'excuse me' ||
+    
+    // Signos de puntuación solos
+    queryLower === '?' ||
+    queryLower === '¿' ||
+    queryLower === '!' ||
+    queryLower === '¡' ||
+    queryLower === '.' ||
+    queryLower === ',' ||
+    
+    // Frases muy cortas sin contexto de productos
+    (queryLower.length <= 3 && !queryLower.includes('ws') && !queryLower.includes('hobo') && !queryLower.includes('u30')) ||
+    
+    // Frases de confirmación/negación
+    queryLower === 'sí' ||
+    queryLower === 'si' ||
+    queryLower === 'no' ||
+    queryLower === 'yes' ||
+    queryLower === 'ok' ||
+    queryLower === 'okay' ||
+    queryLower === 'vale' ||
+    queryLower === 'perfecto' ||
+    queryLower === 'perfect' ||
+    queryLower === 'bien' ||
+    queryLower === 'good' ||
+    queryLower === 'mal' ||
+    queryLower === 'bad'
   )
   
   // Detectar consultas generales (exploración)
@@ -308,6 +366,21 @@ Si el usuario solicita una recomendación:
 `
     : ''
 
+  // Prompt optimizado para saludos simples (ahorro de tokens)
+  const simpleGreetingPrompt = `Eres un asistente especializado en equipos de medición e instrumentación.
+
+CONSULTA: "${userQuery}"
+
+Responde de forma amigable y concisa:
+- Para saludos: "¡Hola! Soy tu asistente especializado en equipos de medición e instrumentación. ¿En qué puedo ayudarte hoy?"
+- Para agradecimientos: "¡De nada! Estoy aquí para ayudarte con cualquier consulta sobre equipos técnicos."
+- Para despedidas: "¡Hasta luego! No dudes en consultarme cuando necesites información sobre equipos de medición."
+- Para signos de puntuación: "¿En qué puedo ayudarte con equipos de medición e instrumentación?"
+
+Máximo 30 palabras.`
+
+
+  // Prompt completo para consultas de productos
   const fullPrompt = `Eres un EXPERTO EN PRODUCTOS CIENTÍFICOS Y TÉCNICOS especializado en instrumentación y equipos de medición.
 
 PRINCIPIOS FUNDAMENTALES:
@@ -338,10 +411,6 @@ ${recommendationInstructions}
 IMPORTANTE: Si encuentras información en la sección "INFORMACIÓN TÉCNICA DE MARCAS", esos productos SÍ están disponibles en nuestro inventario. Usa esa información para responder al usuario con detalles técnicos completos.
 
 FORMATOS DE RESPUESTA:
-
-**SALUDOS SIMPLES (Hola, Hi, etc.):**
-Responde de forma amigable y concisa:
-"¡Hola! Soy tu asistente especializado en equipos de medición e instrumentación. ¿En qué puedo ayudarte hoy?"
 
 **CONSULTAS GENERALES:**
 1. [Producto] - [Aplicación] - [Nivel técnico]
@@ -398,8 +467,11 @@ IMPORTANTE:
 
 Responde como experto técnico:`
 
+  // Usar prompt optimizado para saludos simples
+  const finalPrompt = isSimpleGreeting ? simpleGreetingPrompt : fullPrompt
+
   return { 
-    prompt: fullPrompt, 
+    prompt: finalPrompt, 
     isGeneralQuery, 
     isRecommendationRequest, 
     isContextualQuery,

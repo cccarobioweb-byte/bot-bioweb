@@ -6,6 +6,58 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Función para generar respuestas específicas de WhatsApp (ultra-cortas)
+async function generateWhatsAppResponse(userMessage: string, products: any[], brandInfo: any[]): Promise<string> {
+  const messageLower = userMessage.toLowerCase().trim()
+  
+  // Detectar saludos simples
+  const isGreeting = (
+    messageLower === 'hola' ||
+    messageLower === 'hi' ||
+    messageLower === 'hello' ||
+    messageLower === 'hey' ||
+    messageLower === 'buenos días' ||
+    messageLower === 'buenas tardes' ||
+    messageLower === 'buenas noches' ||
+    messageLower === 'gracias' ||
+    messageLower === 'thank you' ||
+    messageLower === 'adiós' ||
+    messageLower === 'bye' ||
+    messageLower === '?' ||
+    messageLower === '¿'
+  )
+  
+  if (isGreeting) {
+    if (messageLower.includes('hola') || messageLower.includes('hi') || messageLower.includes('hello')) {
+      return "*¡Hola!* Soy tu asistente de equipos técnicos. ¿Qué necesitas?"
+    }
+    if (messageLower.includes('gracias') || messageLower.includes('thank')) {
+      return "*¡De nada!* ¿En qué más puedo ayudarte?"
+    }
+    if (messageLower.includes('adiós') || messageLower.includes('bye')) {
+      return "*¡Hasta luego!* No dudes en consultarme cuando necesites información."
+    }
+    return "¿En qué puedo ayudarte con *equipos de medición*?"
+  }
+  
+  // Detectar consultas de productos específicos
+  if (products.length > 0) {
+    const product = products[0]
+    const productName = product.name || 'Producto'
+    const category = product.categoria || 'equipo'
+    
+    // Respuesta ultra-corta para WhatsApp
+    if (products.length === 1) {
+      return `*${productName}* - ${category}. ¿Quieres saber más detalles?`
+    } else {
+      return `Tenemos *${products.length} opciones*. ¿Para qué aplicación específica?`
+    }
+  }
+  
+  // Sin productos encontrados
+  return "No tenemos productos para esa aplicación. ¿Qué *otra cosa* necesitas?"
+}
+
 serve(async (req) => {
   // Manejar CORS
   if (req.method === 'OPTIONS') {
@@ -63,48 +115,49 @@ serve(async (req) => {
       console.error('❌ Error buscando información de marcas:', brandError)
     }
 
-    // Llamar a la función de chat principal
-    const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
-      body: {
-        message: userMessage,
-        originalMessage: userMessage,
-        chatHistory: [], // ManyChat no mantiene historial, empezamos limpio
-        products: products || [], // Productos encontrados
-        brandInfo: brandInfo || [], // Información de marcas encontrada
-        translationInfo: {
-          wasTranslated: false,
-          detectedLanguage: 'es'
-        },
-        source: 'whatsapp', // Identificar que viene de WhatsApp
-        userInfo: {
-          id: userId,
-          name: userName,
-          phone: phoneNumber
+    // Crear prompt específico para WhatsApp (respuestas cortas)
+    const whatsappResponse = await generateWhatsAppResponse(userMessage, products || [], brandInfo || [])
+    
+    // Si no se puede generar respuesta específica, usar chat normal
+    let botResponse = whatsappResponse
+    
+    if (!whatsappResponse || whatsappResponse.length < 10) {
+      console.log('🔄 Usando chat normal para WhatsApp')
+      const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
+        body: {
+          message: userMessage,
+          originalMessage: userMessage,
+          chatHistory: [], // ManyChat no mantiene historial, empezamos limpio
+          products: products || [], // Productos encontrados
+          brandInfo: brandInfo || [], // Información de marcas encontrada
+          translationInfo: {
+            wasTranslated: false,
+            detectedLanguage: 'es'
+          },
+          source: 'whatsapp', // Identificar que viene de WhatsApp
+          userInfo: {
+            id: userId,
+            name: userName,
+            phone: phoneNumber
+          }
         }
+      })
+      
+      if (chatError) {
+        console.error('❌ Error en chat:', chatError)
+        botResponse = 'Lo siento, no pude procesar tu mensaje.'
+      } else {
+        botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
       }
-    })
-
-    if (chatError) {
-      console.error('❌ Error en chat:', chatError)
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Error procesando mensaje' 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
     }
 
     // Formatear respuesta para ManyChat
-    const botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
+    const finalResponse = botResponse || 'Lo siento, no pude procesar tu mensaje.'
     
     // ManyChat espera una respuesta específica
     const manychatResponse = {
       success: true,
-      response: botResponse,
+      response: finalResponse,
       user_id: userId,
       timestamp: new Date().toISOString()
     }

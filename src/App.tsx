@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Bot, Settings, MessageSquare } from 'lucide-react'
 import ChatPage from './components/ChatPage'
 import AdminPage from './components/AdminPage'
+import Footer from './components/Footer'
 import './index.css'
 
 type Page = 'chat' | 'admin'
@@ -10,7 +11,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('chat')
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -52,9 +53,12 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="h-[calc(100vh-4rem)]">
+      <main className="flex-1 min-h-0">
         {currentPage === 'chat' ? <ChatPage /> : <AdminPage />}
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }
