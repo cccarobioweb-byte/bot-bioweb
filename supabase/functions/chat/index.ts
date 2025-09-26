@@ -27,7 +27,8 @@ interface BrandInfo {
   id: number
   brand_name: string
   title: string
-  content: string
+  content?: string
+  json_data?: any
   category?: string
   tags?: string[]
   is_active: boolean
@@ -61,7 +62,7 @@ function buildChatPrompt(
   chatHistory: Array<{ role: string; content: string }>,
   brandInfo: BrandInfo[] = [],
   translationInfo?: { wasTranslated: boolean; detectedLanguage: string }
-): { prompt: string; isGeneralQuery: boolean } {
+): { prompt: string; isGeneralQuery: boolean; isRecommendationRequest: boolean; isContextualQuery: boolean; isSimpleGreeting: boolean } {
   const historyText = chatHistory
     .slice(-4) // Reducido a 4 mensajes para optimizar
     .map(msg => `${msg.role === 'user' ? 'Usuario' : 'Sistema'}: ${msg.content}`)
@@ -69,6 +70,18 @@ function buildChatPrompt(
 
   // Detectar tipo de consulta con análisis de contexto
   const queryLower = userQuery.toLowerCase()
+  
+  // Detectar saludos simples
+  const isSimpleGreeting = (
+    queryLower === 'hola' ||
+    queryLower === 'hi' ||
+    queryLower === 'hello' ||
+    queryLower === 'buenos días' ||
+    queryLower === 'buenas tardes' ||
+    queryLower === 'buenas noches' ||
+    queryLower === 'saludos' ||
+    queryLower === 'hey'
+  )
   
   // Detectar consultas generales (exploración)
   const isGeneralQuery = (
@@ -326,6 +339,10 @@ IMPORTANTE: Si encuentras información en la sección "INFORMACIÓN TÉCNICA DE 
 
 FORMATOS DE RESPUESTA:
 
+**SALUDOS SIMPLES (Hola, Hi, etc.):**
+Responde de forma amigable y concisa:
+"¡Hola! Soy tu asistente especializado en equipos de medición e instrumentación. ¿En qué puedo ayudarte hoy?"
+
 **CONSULTAS GENERALES:**
 1. [Producto] - [Aplicación] - [Nivel técnico]
 2. [Producto] - [Aplicación] - [Nivel técnico]
@@ -385,7 +402,8 @@ Responde como experto técnico:`
     prompt: fullPrompt, 
     isGeneralQuery, 
     isRecommendationRequest, 
-    isContextualQuery 
+    isContextualQuery,
+    isSimpleGreeting
   }
 }
 
@@ -393,7 +411,7 @@ Responde como experto técnico:`
 const edgeCache = new Map<string, { response: string; timestamp: number }>()
 const CACHE_TTL = 2 * 60 * 1000 // 2 minutos
 
-async function callDeepSeek(prompt: string, isGeneralQuery: boolean = false, isRecommendationRequest: boolean = false, isContextualQuery: boolean = false): Promise<string> {
+async function callDeepSeek(prompt: string, isGeneralQuery: boolean = false, isRecommendationRequest: boolean = false, isContextualQuery: boolean = false, isSimpleGreeting: boolean = false): Promise<string> {
   // Verificar caché
   const cacheKey = prompt.substring(0, 100) // Usar primeros 100 caracteres como clave
   const cached = edgeCache.get(cacheKey)
@@ -410,10 +428,11 @@ async function callDeepSeek(prompt: string, isGeneralQuery: boolean = false, isR
   }
 
   // Límites optimizados para respuestas completas y eficientes
-  const maxTokens = isGeneralQuery ? 200 : 
+  const maxTokens = isSimpleGreeting ? 50 : 
+                   (isGeneralQuery ? 200 : 
                    (isRecommendationRequest ? 300 : 
-                   (isContextualQuery ? 500 : 800))  // Consultas contextuales: análisis técnico completo
-  const temperature = isGeneralQuery ? 0.1 : 0.2
+                   (isContextualQuery ? 500 : 800)))  // Consultas contextuales: análisis técnico completo
+  const temperature = isSimpleGreeting ? 0.1 : (isGeneralQuery ? 0.1 : 0.2)
 
   console.log('🚀 Iniciando llamada a DeepSeek con streaming...')
   const startTime = Date.now()
@@ -590,11 +609,11 @@ serve(async (req) => {
         }
       ]
       
-      response = await callDeepSeek(translationPrompt + '\n\n' + message, false, false, false)
+      response = await callDeepSeek(translationPrompt + '\n\n' + message, false, false, false, false)
     } else {
       // Construir el prompt para DeepSeek (chat normal)
-      const { prompt, isGeneralQuery, isRecommendationRequest, isContextualQuery } = buildChatPrompt(message, products, chatHistory, brandInfo, translationInfo)
-      response = await callDeepSeek(prompt, isGeneralQuery, isRecommendationRequest, isContextualQuery)
+      const { prompt, isGeneralQuery, isRecommendationRequest, isContextualQuery, isSimpleGreeting } = buildChatPrompt(message, products, chatHistory, brandInfo, translationInfo)
+      response = await callDeepSeek(prompt, isGeneralQuery, isRecommendationRequest, isContextualQuery, isSimpleGreeting)
     }
     
     // La comparación ahora se maneja directamente en el prompt de DeepSeek
