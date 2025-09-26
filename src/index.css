@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos personalizados para el chat */
+@layer components {
+  .chat-container {
+    @apply h-full flex flex-col max-w-4xl mx-auto bg-gray-50;
+  }
+  
+  .chat-header {
+    @apply bg-white shadow-sm border-b p-4 flex items-center justify-between;
+  }
+  
+  .chat-messages {
+    @apply flex-1 overflow-y-auto p-4 space-y-4;
+  }
+  
+  .chat-input-container {
+    @apply bg-white border-t p-4;
+  }
+  
+  .message-user {
+    @apply bg-blue-500 text-white rounded-lg px-4 py-2 ml-auto max-w-xs;
+  }
+  
+  .message-bot {
+    @apply bg-white border rounded-lg px-4 py-2 mr-auto max-w-md shadow-sm;
+  }
+}
+
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
