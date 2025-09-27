@@ -105,6 +105,7 @@ async function sendManyChatMessage(userId: string, message: string) {
       return
     }
 
+    // Formato correcto según documentación de ManyChat
     const response = await fetch('https://api.manychat.com/fb/sending/sendContent', {
       method: 'POST',
       headers: {
@@ -126,7 +127,8 @@ async function sendManyChatMessage(userId: string, message: string) {
     if (response.ok) {
       console.log('✅ Mensaje enviado a ManyChat para usuario:', userId)
     } else {
-      console.error('❌ Error enviando mensaje a ManyChat:', response.status, await response.text())
+      const errorText = await response.text()
+      console.error('❌ Error enviando mensaje a ManyChat:', response.status, errorText)
     }
   } catch (error) {
     console.error('❌ Error en sendManyChatMessage:', error)
