@@ -6,71 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Función para generar respuestas específicas de WhatsApp (ultra-cortas)
-async function generateWhatsAppResponse(userMessage: string, products: any[], brandInfo: any[]): Promise<string> {
-  const messageLower = userMessage.toLowerCase().trim()
-  
-  // Detectar saludos simples (solo si es EXACTAMENTE un saludo)
-  const isSimpleGreeting = (
-    messageLower === 'hola' ||
-    messageLower === 'hi' ||
-    messageLower === 'hello' ||
-    messageLower === 'hey' ||
-    messageLower === 'buenos días' ||
-    messageLower === 'buenas tardes' ||
-    messageLower === 'buenas noches' ||
-    messageLower === 'gracias' ||
-    messageLower === 'thank you' ||
-    messageLower === 'adiós' ||
-    messageLower === 'bye' ||
-    messageLower === '?' ||
-    messageLower === '¿'
-  )
-  
-  if (isSimpleGreeting) {
-    if (messageLower.includes('hola') || messageLower.includes('hi') || messageLower.includes('hello')) {
-      return "*¡Hola!* Soy tu asistente de equipos técnicos. ¿Qué necesitas?"
-    }
-    if (messageLower.includes('gracias') || messageLower.includes('thank')) {
-      return "*¡De nada!* ¿En qué más puedo ayudarte?"
-    }
-    if (messageLower.includes('adiós') || messageLower.includes('bye')) {
-      return "*¡Hasta luego!* No dudes en consultarme cuando necesites información."
-    }
-    return "¿En qué puedo ayudarte con *equipos de medición*?"
-  }
-  
-  // Si hay productos encontrados, analizar la consulta específica
-  if (products.length > 0) {
-    // Buscar productos que coincidan mejor con la consulta
-    const queryWords = messageLower.split(' ').filter(word => word.length > 2)
-    let bestMatch = products[0] // Producto por defecto
-    
-    // Buscar coincidencias en nombre, categoría o descripción
-    for (const product of products) {
-      const productText = `${product.name || ''} ${product.categoria || ''} ${product.description || ''}`.toLowerCase()
-      const matches = queryWords.filter(word => productText.includes(word))
-      if (matches.length > 0) {
-        bestMatch = product
-        break
-      }
-    }
-    
-    const productName = bestMatch.name || 'Producto'
-    const category = bestMatch.categoria || 'equipo'
-    
-    // Respuesta específica basada en la consulta
-    if (products.length === 1) {
-      return `*${productName}* - ${category}. ¿Quieres saber más detalles?`
-    } else {
-      // Si hay múltiples productos, mencionar el más relevante
-      return `*${productName}* y ${products.length - 1} opciones más. ¿Para qué aplicación específica?`
-    }
-  }
-  
-  // Sin productos encontrados - respuesta más específica
-  return "No tenemos productos para esa aplicación. ¿Qué *otra cosa* necesitas?"
-}
+// Función eliminada - ahora usamos directamente el chatbot principal
 
 serve(async (req) => {
   // Manejar CORS
@@ -97,8 +33,8 @@ serve(async (req) => {
     if (!userMessage.trim()) {
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: 'No se recibió mensaje' 
+          reply: 'No se recibió mensaje. Por favor, envía tu consulta nuevamente.',
+          status: 'error' 
         }),
         { 
           status: 400, 
@@ -141,6 +77,12 @@ serve(async (req) => {
     }
 
     // Usar directamente el chat normal (que ya tiene búsqueda semántica)
+    console.log('🤖 Llamando al chatbot principal con:', {
+      message: userMessage,
+      products: products.length,
+      brandInfo: brandInfo.length
+    })
+    
     const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
       body: {
         message: userMessage,
@@ -160,6 +102,8 @@ serve(async (req) => {
         }
       }
     })
+    
+    console.log('🤖 Respuesta del chatbot:', chatResponse)
     
     let botResponse = 'Lo siento, no pude procesar tu mensaje.'
     
@@ -213,12 +157,10 @@ serve(async (req) => {
       .replace(/\n•/g, '\n•')  // Mantener bullets
       .trim()
     
-    // ManyChat espera una respuesta específica
+    // ManyChat espera una respuesta específica según la documentación
     const manychatResponse = {
-      success: true,
-      response: finalResponse,
-      user_id: userId,
-      timestamp: new Date().toISOString()
+      reply: finalResponse,
+      status: "success"
     }
 
     // Respuesta enviada a ManyChat
@@ -235,8 +177,8 @@ serve(async (req) => {
     console.error('❌ Error en webhook:', error)
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: 'Error interno del servidor' 
+        reply: 'Lo siento, ocurrió un error técnico. Por favor, intenta nuevamente.',
+        status: 'error' 
       }),
       { 
         status: 500, 

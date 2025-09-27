@@ -223,12 +223,7 @@ class CacheService {
 // Exportar instancia singleton
 export const cacheService = CacheService.getInstance()
 
-// Funciones de utilidad para uso directo
-export const getSearchCache = (query: string, keywords: string[]) => 
-  cacheService.getSearchCache(query, keywords)
-
-export const setSearchCache = (query: string, keywords: string[], products: any[]) => 
-  cacheService.setSearchCache(query, keywords, products)
+// Funciones de utilidad para uso directo (solo chat y traducción)
 
 export const getTranslationCache = (text: string) => 
   cacheService.getTranslationCache(text)
@@ -244,6 +239,7 @@ export const setChatCache = (message: string, context: string, response: string)
 
 export const clearAllCache = () => cacheService.clearAll()
 export const getCacheStats = () => cacheService.getStats()
+
 
 
 

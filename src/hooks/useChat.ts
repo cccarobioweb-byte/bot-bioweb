@@ -16,18 +16,21 @@ export const useChat = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, isInternal: boolean = false) => {
     if (!content.trim() || isLoading) return
 
-    // Agregar mensaje del usuario
-    const userMessage: ChatMessage = {
-      id: uuidv4(),
-      role: 'user',
-      content,
-      timestamp: new Date()
+    // Solo agregar mensaje del usuario si NO es interno
+    if (!isInternal) {
+      const userMessage: ChatMessage = {
+        id: uuidv4(),
+        role: 'user',
+        content,
+        timestamp: new Date()
+      }
+      
+      setMessages(prev => [...prev, userMessage])
     }
     
-    setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
     setError(null)
 

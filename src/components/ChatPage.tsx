@@ -1,12 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, RotateCcw } from 'lucide-react'
+import { Send, Bot, User, RotateCcw, Camera } from 'lucide-react'
 import { useChat } from '../hooks/useChat'
 import MarkdownText from './MarkdownText'
 import TranslationIndicator from './TranslationIndicator'
+import ImageUpload from './ImageUpload'
+import { ChatService } from '../services/chatService'
 
 const ChatPage: React.FC = () => {
   const { messages, isLoading, error, sendMessage, clearChat } = useChat()
   const [inputValue, setInputValue] = useState('')
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [isProcessingImage, setIsProcessingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -35,6 +40,86 @@ const ChatPage: React.FC = () => {
       sendMessage(inputValue.trim())
       setInputValue('')
     }
+  }
+
+  const handleImageSelect = async (file: File) => {
+    setSelectedImage(file)
+    setIsProcessingImage(true)
+
+    try {
+      // Procesar la imagen internamente
+      const result = await ChatService.processImage(file)
+      
+      if (result.success) {
+        // Crear mensaje interno para el chatbot basado en el escenario
+        let internalMessage = ''
+        
+        switch (result.scenario) {
+          case 'exact_match':
+            // Producto encontrado exactamente
+            internalMessage = `He identificado este producto en la imagen: ${result.productName}. ` +
+              `Tenemos exactamente este producto en nuestro catálogo: ${result.product.name} (${result.product.categoria || 'N/A'}). ` +
+              `Descripción: ${result.product.description || 'Sin descripción'}. ` +
+              `Proporciona información detallada sobre este producto específico.`
+            break
+            
+          case 'similar_products':
+            // Producto no encontrado pero hay similares
+            const similarNames = result.similarProducts?.map(p => p.name).join(', ') || ''
+            internalMessage = `He identificado este producto en la imagen: ${result.productName}. ` +
+              `No tenemos exactamente este producto, pero tenemos productos similares: ${similarNames}. ` +
+              `Explica que no tenemos el producto específico pero presenta las alternativas similares disponibles.`
+            break
+            
+          case 'no_match':
+            // Producto no encontrado ni similares
+            internalMessage = `He identificado este producto en la imagen: ${result.productName}. ` +
+              `No tenemos este producto ni productos similares en nuestro catálogo actual. ` +
+              `Explica brevemente por qué no está disponible y sugiere que el usuario puede hacer otras consultas. ` +
+              `NO listes todas las categorías disponibles, solo menciona que tenemos otros productos. ` +
+              `Mantén la respuesta concisa pero completa.`
+            break
+            
+          case 'recognition_failed':
+            // No se pudo reconocer la imagen
+            internalMessage = `No pude reconocer claramente el producto en la imagen enviada. ` +
+              `Explica que no pudo identificar el producto y sugiere que el usuario intente con una imagen más clara o describa el producto.`
+            break
+            
+          default:
+            internalMessage = `He identificado este producto en la imagen: ${result.productName}. ` +
+              `Proporciona información sobre este producto.`
+        }
+        
+        // Enviar mensaje interno al chatbot (no visible al usuario)
+        // Usar sendMessage directamente sin mostrar el mensaje interno
+        sendMessage(internalMessage, true) // true = mensaje interno
+      } else {
+        // Error en el procesamiento
+        const message = `No pude identificar claramente el producto en la imagen. ` +
+          `Por favor, intenta con una imagen más clara o describe el producto que buscas.`
+        
+        sendMessage(message)
+      }
+    } catch (error) {
+      console.error('Error procesando imagen:', error)
+      const message = `Ocurrió un error al procesar la imagen. Por favor, intenta de nuevo.`
+      sendMessage(message)
+    } finally {
+      setIsProcessingImage(false)
+      setSelectedImage(null)
+    }
+  }
+
+  const handleImageRemove = () => {
+    setSelectedImage(null)
+    setImageError(null)
+  }
+
+  const handleImageError = (error: string) => {
+    setImageError(error)
+    // Mostrar el error como mensaje en el chat
+    sendMessage(`❌ Error al cargar imagen: ${error}`)
   }
 
   return (
@@ -184,6 +269,19 @@ const ChatPage: React.FC = () => {
       {/* Input */}
       <div className="bg-white border-t p-4 flex-shrink-0">
         <div className="flex space-x-3">
+          {/* Botón de carga de imagen */}
+          <div className="flex-shrink-0">
+            <ImageUpload
+              onImageSelect={handleImageSelect}
+              onImageRemove={handleImageRemove}
+              selectedImage={selectedImage}
+              isProcessing={isProcessingImage}
+              onError={handleImageError}
+              className="w-12 h-12"
+            />
+          </div>
+
+          {/* Input de texto */}
           <div className="flex-1 relative">
             <input
               ref={inputRef}
@@ -193,22 +291,23 @@ const ChatPage: React.FC = () => {
               onKeyPress={handleKeyPress}
               placeholder="Pregúntame sobre cualquier producto..."
               className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
-              disabled={isLoading}
+              disabled={isLoading || isProcessingImage}
             />
           </div>
           
+          {/* Botón de enviar */}
           <button
             type="button"
             onClick={handleSendClick}
-            disabled={!inputValue.trim() || isLoading}
-            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors flex items-center justify-center"
+            disabled={!inputValue.trim() || isLoading || isProcessingImage}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors flex items-center justify-center flex-shrink-0"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
         
         <p className="text-xs text-gray-500 mt-2 text-center">
-          Consulta especializada basada en nuestro catálogo de productos
+          Consulta especializada basada en nuestro catálogo de productos • 📷 Sube una foto para identificar productos
         </p>
       </div>
       </div>

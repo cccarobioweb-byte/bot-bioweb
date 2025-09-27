@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, Package, BarChart3, Info, Brain } from 'lucide-react'
 import { type Product } from '../lib/supabase'
 import { AdminService, type CreateProductData } from '../services/adminService'
-import { OptimizedSearchService } from '../services/optimizedSearchService'
+// OptimizedSearchService eliminado - usando solo búsqueda semántica
 import { useNotifications } from '../hooks/useNotifications'
 import Notification from './Notification'
 import ConfirmDialog from './ConfirmDialog'
@@ -68,23 +68,14 @@ const AdminPage: React.FC = () => {
     }
 
     try {
-      // Usar búsqueda optimizada para términos de búsqueda complejos
-      if (searchTerm.length > 2) {
-        const searchResult = await OptimizedSearchService.searchProducts({
-          query: searchTerm,
-          limit: 100 // Limitar para la interfaz
-        })
-        setFilteredProducts(searchResult.products)
-      } else {
-        // Para búsquedas cortas, usar filtrado local
-        const filtered = products.filter(product =>
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (product as any).categoria?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.type.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        setFilteredProducts(filtered)
-      }
+      // Usar filtrado local simple para la interfaz de administración
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product as any).categoria?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.type.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredProducts(filtered)
       setCurrentPage(1)
     } catch (error) {
       console.error('Error in optimized search:', error)

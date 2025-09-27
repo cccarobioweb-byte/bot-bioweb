@@ -516,6 +516,7 @@ IMPORTANTE:
 - SIEMPRE proporciona alternativas cuando sea posible
 - SIEMPRE justifica técnicamente tus recomendaciones con datos específicos
 - SIEMPRE considera el contexto de aplicación del usuario
+- NO listes todas las categorías disponibles, solo menciona que tenemos otros productos
 
 Responde como experto técnico con años de experiencia:`
 
@@ -555,7 +556,7 @@ async function callDeepSeek(prompt: string, isGeneralQuery: boolean = false, isR
   const maxTokens = isSimpleGreeting ? 50 : 
                    (isGeneralQuery ? 200 : 
                    (isRecommendationRequest ? 400 : 
-                   (isContextualQuery ? 800 : 1200)))  // Consultas contextuales: análisis técnico completo
+                   (isContextualQuery ? 1500 : 1200)))  // Consultas contextuales: análisis técnico completo (aumentado)
   const temperature = isSimpleGreeting ? 0.1 : (isGeneralQuery ? 0.1 : 0.2)
 
   console.log('🚀 Iniciando llamada a DeepSeek con streaming...')

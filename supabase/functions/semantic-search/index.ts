@@ -259,7 +259,7 @@ serve(async (req) => {
     const {
       query,
       type = 'both',
-      similarity_threshold = 0.7,
+      similarity_threshold = 0.4, // Threshold más permisivo para mejor cobertura
       max_results = 10,
       user_id,
       source = 'api',
