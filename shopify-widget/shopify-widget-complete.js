@@ -232,7 +232,7 @@
 
     // Configuración del widget
     const CONFIG = {
-        apiUrl: window.CHAT_WIDGET_CONFIG?.apiUrl || 'https://tumrqxsqnmznlqeqwfgx.supabase.co/functions/v1/shopify-chat',
+        apiUrl: window.CHAT_WIDGET_CONFIG?.apiUrl || 'https://tumrqxsqnmznlqeqwfgx.supabase.co/functions/v1/chat',
         position: 'bottom-right',
         showOnPages: ['all'],
         hideOnPages: [],
@@ -448,11 +448,20 @@
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bXJxeHNxbm16bmxxZXF3Zmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzMDA0NzEsImV4cCI6MjA1MDg3NjQ3MX0.7ff7912af5823f46e8c9c69893cf1f3ba8acc47ba18ad5bc436e4a07adbd499b'
                 },
                 body: JSON.stringify({
                     message: message,
-                    chatHistory: this.chatHistory
+                    originalMessage: message,
+                    chatHistory: this.chatHistory,
+                    products: [],
+                    brandInfo: [],
+                    translationInfo: {
+                        wasTranslated: false,
+                        detectedLanguage: 'es'
+                    },
+                    source: 'shopify'
                 })
             });
 
