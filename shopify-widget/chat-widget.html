@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget - Shopify</title>
+    <link rel="stylesheet" href="chat-widget.css">
+</head>
+<body>
+    <!-- Widget de Chat Flotante -->
+    <div id="chat-widget" class="chat-widget">
+        <!-- Botón flotante -->
+        <div id="chat-toggle" class="chat-toggle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill="currentColor"/>
+                <path d="M7 9H17V11H7V9ZM7 12H15V14H7V12Z" fill="currentColor"/>
+            </svg>
+        </div>
+
+        <!-- Ventana de chat -->
+        <div id="chat-window" class="chat-window">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <h3>Asistente Técnico</h3>
+                    <span class="chat-status">En línea</span>
+                </div>
+                <button id="chat-close" class="chat-close">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mensajes -->
+            <div id="chat-messages" class="chat-messages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        ¡Hola! Soy tu asistente especializado en equipos técnicos. ¿En qué puedo ayudarte hoy?
+                    </div>
+                    <div class="message-time">Ahora</div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="chat-input" 
+                        class="chat-input" 
+                        placeholder="Escribe tu consulta..."
+                        maxlength="500"
+                    >
+                    <button id="chat-send" class="chat-send" disabled>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 2L9 11L18 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chat-input-footer">
+                    <span class="chat-hint">Pregúntame sobre cualquier producto técnico</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="chat-loading" class="chat-loading" style="display: none;">
+        <div class="chat-loading-spinner"></div>
+        <span>Procesando...</span>
+    </div>
+
+    <script src="chat-widget.js"></script>
+</body>
+</html>
