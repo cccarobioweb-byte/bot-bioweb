@@ -6,7 +6,132 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Función eliminada - ahora usamos directamente el chatbot principal
+// Función para procesar el chat de forma asíncrona y enviar respuesta real
+async function processChatAsync(
+  userMessage: string, 
+  products: any[], 
+  brandInfo: any[], 
+  userId: string, 
+  userName: string, 
+  phoneNumber: string, 
+  supabase: any
+) {
+  try {
+    console.log('🤖 Procesando chat asíncrono para:', userId)
+    
+    // Llamar al chatbot principal
+    const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
+      body: {
+        message: userMessage,
+        originalMessage: userMessage,
+        chatHistory: [],
+        products: products || [],
+        brandInfo: brandInfo || [],
+        translationInfo: {
+          wasTranslated: false,
+          detectedLanguage: 'es'
+        },
+        source: 'whatsapp',
+        userInfo: {
+          id: userId,
+          name: userName,
+          phone: phoneNumber
+        }
+      }
+    })
+    
+    let botResponse = 'Lo siento, no pude procesar tu mensaje.'
+    
+    if (chatError) {
+      console.error('❌ Error en chat asíncrono:', chatError)
+      botResponse = 'Lo siento, ocurrió un error técnico. Por favor, intenta nuevamente.'
+    } else {
+      botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
+      
+      // Acortar respuesta para WhatsApp si es muy larga
+      if (botResponse.length > 600) {
+        const lines = botResponse.split('\n')
+        let simpleResponse = ''
+        
+        // Buscar la recomendación principal
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          if (line.includes('**RECOMENDACIÓN PRINCIPAL:**') || line.includes('**RECOMENDACIÓN:**')) {
+            simpleResponse += line.replace(/\*\*/g, '*') + '\n'
+            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+              if (lines[j].trim() && !lines[j].includes('**')) {
+                simpleResponse += lines[j] + '\n'
+              }
+            }
+            break
+          }
+        }
+        
+        if (simpleResponse.trim()) {
+          botResponse = simpleResponse.trim() + '\n\n¿Quieres más detalles?'
+        } else {
+          const lastPeriod = botResponse.lastIndexOf('.', 400)
+          if (lastPeriod > 200) {
+            botResponse = botResponse.substring(0, lastPeriod + 1) + '\n\n¿Quieres más detalles?'
+          } else {
+            botResponse = botResponse.substring(0, 400) + '...\n\n¿Quieres más detalles?'
+          }
+        }
+      }
+    }
+
+    // Formatear respuesta para WhatsApp
+    let finalResponse = botResponse
+      .replace(/\*\*/g, '*')
+      .replace(/\n\n+/g, '\n')
+      .replace(/\n•/g, '\n•')
+      .trim()
+
+    // Enviar respuesta real usando ManyChat API
+    await sendManyChatMessage(userId, finalResponse)
+    
+  } catch (error) {
+    console.error('❌ Error en procesamiento asíncrono:', error)
+    await sendManyChatMessage(userId, 'Lo siento, ocurrió un error técnico. Por favor, intenta nuevamente.')
+  }
+}
+
+// Función para enviar mensaje a ManyChat usando su API
+async function sendManyChatMessage(userId: string, message: string) {
+  try {
+    const manychatApiKey = Deno.env.get('MANYCHAT_API_KEY')
+    if (!manychatApiKey) {
+      console.error('❌ MANYCHAT_API_KEY no configurada')
+      return
+    }
+
+    const response = await fetch('https://api.manychat.com/fb/sending/sendContent', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${manychatApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        subscriber_id: userId,
+        data: {
+          version: 'v2.0',
+          content: {
+            type: 'text',
+            text: message
+          }
+        }
+      })
+    })
+
+    if (response.ok) {
+      console.log('✅ Mensaje enviado a ManyChat para usuario:', userId)
+    } else {
+      console.error('❌ Error enviando mensaje a ManyChat:', response.status, await response.text())
+    }
+  } catch (error) {
+    console.error('❌ Error en sendManyChatMessage:', error)
+  }
+}
 
 serve(async (req) => {
   // Manejar CORS
@@ -76,104 +201,27 @@ serve(async (req) => {
       console.error('❌ Error en búsqueda semántica:', error)
     }
 
-    // Usar directamente el chat normal (que ya tiene búsqueda semántica)
-    console.log('🤖 Llamando al chatbot principal con:', {
-      message: userMessage,
-      products: products.length,
-      brandInfo: brandInfo.length
-    })
-    
-    const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
-      body: {
-        message: userMessage,
-        originalMessage: userMessage,
-        chatHistory: [], // ManyChat no mantiene historial, empezamos limpio
-        products: products || [], // Productos encontrados por búsqueda semántica
-        brandInfo: brandInfo || [], // Información de marcas encontrada
-        translationInfo: {
-          wasTranslated: false,
-          detectedLanguage: 'es'
-        },
-        source: 'whatsapp', // Identificar que viene de WhatsApp
-        userInfo: {
-          id: userId,
-          name: userName,
-          phone: phoneNumber
-        }
-      }
-    })
-    
-    console.log('🤖 Respuesta del chatbot:', chatResponse)
-    
-    let botResponse = 'Lo siento, no pude procesar tu mensaje.'
-    
-    if (chatError) {
-      console.error('❌ Error en chat:', chatError)
-    } else {
-      botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
-      console.log('🤖 Bot response extraída:', botResponse)
-      
-      // Acortar respuesta para WhatsApp si es muy larga
-      if (botResponse.length > 600) {
-        // Para WhatsApp, generar respuesta más simple
-        const lines = botResponse.split('\n')
-        let simpleResponse = ''
-        
-        // Buscar la recomendación principal
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-          if (line.includes('**RECOMENDACIÓN PRINCIPAL:**') || line.includes('**RECOMENDACIÓN:**')) {
-            simpleResponse += line.replace(/\*\*/g, '*') + '\n'
-            // Agregar las siguientes 2-3 líneas de justificación
-            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-              if (lines[j].trim() && !lines[j].includes('**')) {
-                simpleResponse += lines[j] + '\n'
-              }
-            }
-            break
-          }
-        }
-        
-        if (simpleResponse.trim()) {
-          botResponse = simpleResponse.trim() + '\n\n¿Quieres más detalles?'
-        } else {
-          // Fallback: cortar en punto lógico
-          const lastPeriod = botResponse.lastIndexOf('.', 400)
-          if (lastPeriod > 200) {
-            botResponse = botResponse.substring(0, lastPeriod + 1) + '\n\n¿Quieres más detalles?'
-          } else {
-            botResponse = botResponse.substring(0, 400) + '...\n\n¿Quieres más detalles?'
-          }
-        }
-      }
-    }
-
-    // Formatear respuesta para ManyChat
-    let finalResponse = botResponse || 'Lo siento, no pude procesar tu mensaje.'
-    
-    // Limpiar formato para WhatsApp/ManyChat
-    finalResponse = finalResponse
-      .replace(/\*\*/g, '*')  // Convertir ** a * para WhatsApp
-      .replace(/\n\n+/g, '\n')  // Reducir saltos de línea múltiples
-      .replace(/\n•/g, '\n•')  // Mantener bullets
-      .trim()
-    
-    // ManyChat espera una respuesta específica según la documentación
-    const manychatResponse = {
-      reply: finalResponse,
+    // Responder inmediatamente a ManyChat para evitar timeout
+    const immediateResponse = {
+      reply: "🤖 Procesando tu consulta... Te responderé en un momento.",
       status: "success"
     }
 
-    console.log('📤 Respuesta final para ManyChat:', manychatResponse)
+    console.log('📤 Respuesta inmediata para ManyChat:', immediateResponse)
 
-    // Respuesta enviada a ManyChat
-    return new Response(
-      JSON.stringify(manychatResponse),
+    // Enviar respuesta inmediata
+    const response = new Response(
+      JSON.stringify(immediateResponse),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
+
+    // Procesar la consulta de forma asíncrona (sin await)
+    processChatAsync(userMessage, products, brandInfo, userId, userName, phoneNumber, supabase)
+
+    return response
 
   } catch (error) {
     console.error('❌ Error en webhook:', error)
