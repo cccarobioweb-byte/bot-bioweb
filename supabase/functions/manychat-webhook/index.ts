@@ -169,41 +169,49 @@ serve(async (req) => {
       botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
       
       // Acortar respuesta para WhatsApp si es muy larga
-      if (botResponse.length > 800) {
-        // Buscar secciones completas para cortar de manera inteligente
-        const sections = [
-          '**ALTERNATIVAS RECOMENDADAS:**',
-          '**ALTERNATIVAS DISPONIBLES:**',
-          '**CONSIDERACIONES DE IMPLEMENTACIÓN:**',
-          '**FACTORES DECISIVOS:**',
-          '**APLICACIÓN IDEAL:**'
-        ]
+      if (botResponse.length > 600) {
+        // Para WhatsApp, generar respuesta más simple
+        const lines = botResponse.split('\n')
+        let simpleResponse = ''
         
-        let cutPoint = -1
-        for (const section of sections) {
-          const index = botResponse.indexOf(section)
-          if (index > 0 && index < 600) {
-            cutPoint = index
+        // Buscar la recomendación principal
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          if (line.includes('**RECOMENDACIÓN PRINCIPAL:**') || line.includes('**RECOMENDACIÓN:**')) {
+            simpleResponse += line.replace(/\*\*/g, '*') + '\n'
+            // Agregar las siguientes 2-3 líneas de justificación
+            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+              if (lines[j].trim() && !lines[j].includes('**')) {
+                simpleResponse += lines[j] + '\n'
+              }
+            }
             break
           }
         }
         
-        if (cutPoint > 0) {
-          botResponse = botResponse.substring(0, cutPoint).trim() + '\n\n¿Quieres más detalles?'
+        if (simpleResponse.trim()) {
+          botResponse = simpleResponse.trim() + '\n\n¿Quieres más detalles?'
         } else {
-          // Si no encontramos una sección apropiada, cortar en un punto lógico
-          const lastPeriod = botResponse.lastIndexOf('.', 600)
-          if (lastPeriod > 300) {
+          // Fallback: cortar en punto lógico
+          const lastPeriod = botResponse.lastIndexOf('.', 400)
+          if (lastPeriod > 200) {
             botResponse = botResponse.substring(0, lastPeriod + 1) + '\n\n¿Quieres más detalles?'
           } else {
-            botResponse = botResponse.substring(0, 600) + '...\n\n¿Quieres más detalles?'
+            botResponse = botResponse.substring(0, 400) + '...\n\n¿Quieres más detalles?'
           }
         }
       }
     }
 
     // Formatear respuesta para ManyChat
-    const finalResponse = botResponse || 'Lo siento, no pude procesar tu mensaje.'
+    let finalResponse = botResponse || 'Lo siento, no pude procesar tu mensaje.'
+    
+    // Limpiar formato para WhatsApp/ManyChat
+    finalResponse = finalResponse
+      .replace(/\*\*/g, '*')  // Convertir ** a * para WhatsApp
+      .replace(/\n\n+/g, '\n')  // Reducir saltos de línea múltiples
+      .replace(/\n•/g, '\n•')  // Mantener bullets
+      .trim()
     
     // ManyChat espera una respuesta específica
     const manychatResponse = {
