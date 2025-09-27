@@ -449,7 +449,8 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bXJxeHNxbm16bmxxZXF3Zmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzMDA0NzEsImV4cCI6MjA1MDg3NjQ3MX0.7ff7912af5823f46e8c9c69893cf1f3ba8acc47ba18ad5bc436e4a07adbd499b'
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bXJxeHNxbm16bmxxZXF3Zmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU3MDIsImV4cCI6MjA3NDM0MTcwMn0.M3KlRvTk7mb7QLexsNbyaOcJ5pQXvuz4CgDo8_BAG7I',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bXJxeHNxbm16bmxxZXF3Zmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU3MDIsImV4cCI6MjA3NDM0MTcwMn0.M3KlRvTk7mb7QLexsNbyaOcJ5pQXvuz4CgDo8_BAG7I'
                 },
                 body: JSON.stringify({
                     message: message,

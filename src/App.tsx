@@ -9,6 +9,9 @@ type Page = 'chat' | 'admin'
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('chat')
+  
+  // Verificar si estamos en modo público (sin parámetro admin en la URL)
+  const isPublicMode = !window.location.search.includes('admin=true')
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
@@ -36,17 +39,20 @@ const App: React.FC = () => {
                 <span>Chat</span>
               </button>
               
-              <button
-                onClick={() => setCurrentPage('admin')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                  currentPage === 'admin'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                <span>Admin</span>
-              </button>
+              {/* Solo mostrar botón Admin si NO estamos en modo público */}
+              {!isPublicMode && (
+                <button
+                  onClick={() => setCurrentPage('admin')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentPage === 'admin'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Admin</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -54,7 +60,7 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 min-h-0">
-        {currentPage === 'chat' ? <ChatPage /> : <AdminPage />}
+        {currentPage === 'chat' ? <ChatPage /> : (isPublicMode ? <ChatPage /> : <AdminPage />)}
       </main>
 
       {/* Footer */}
