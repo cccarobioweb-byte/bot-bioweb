@@ -169,13 +169,35 @@ serve(async (req) => {
       botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
       
       // Acortar respuesta para WhatsApp si es muy larga
-      if (botResponse.length > 500) {
-        // Buscar la primera recomendación y truncar ahí
-        const firstRecommendation = botResponse.split('**RECOMENDACIÓN')[0]
-        if (firstRecommendation && firstRecommendation.length > 50) {
-          botResponse = firstRecommendation + '\n\n¿Quieres más detalles?'
+      if (botResponse.length > 800) {
+        // Buscar secciones completas para cortar de manera inteligente
+        const sections = [
+          '**ALTERNATIVAS RECOMENDADAS:**',
+          '**ALTERNATIVAS DISPONIBLES:**',
+          '**CONSIDERACIONES DE IMPLEMENTACIÓN:**',
+          '**FACTORES DECISIVOS:**',
+          '**APLICACIÓN IDEAL:**'
+        ]
+        
+        let cutPoint = -1
+        for (const section of sections) {
+          const index = botResponse.indexOf(section)
+          if (index > 0 && index < 600) {
+            cutPoint = index
+            break
+          }
+        }
+        
+        if (cutPoint > 0) {
+          botResponse = botResponse.substring(0, cutPoint).trim() + '\n\n¿Quieres más detalles?'
         } else {
-          botResponse = botResponse.substring(0, 400) + '...\n\n¿Quieres más detalles?'
+          // Si no encontramos una sección apropiada, cortar en un punto lógico
+          const lastPeriod = botResponse.lastIndexOf('.', 600)
+          if (lastPeriod > 300) {
+            botResponse = botResponse.substring(0, lastPeriod + 1) + '\n\n¿Quieres más detalles?'
+          } else {
+            botResponse = botResponse.substring(0, 600) + '...\n\n¿Quieres más detalles?'
+          }
         }
       }
     }

@@ -554,8 +554,8 @@ async function callDeepSeek(prompt: string, isGeneralQuery: boolean = false, isR
   // Límites optimizados para respuestas completas y eficientes
   const maxTokens = isSimpleGreeting ? 50 : 
                    (isGeneralQuery ? 200 : 
-                   (isRecommendationRequest ? 300 : 
-                   (isContextualQuery ? 500 : 800)))  // Consultas contextuales: análisis técnico completo
+                   (isRecommendationRequest ? 400 : 
+                   (isContextualQuery ? 800 : 1200)))  // Consultas contextuales: análisis técnico completo
   const temperature = isSimpleGreeting ? 0.1 : (isGeneralQuery ? 0.1 : 0.2)
 
   console.log('🚀 Iniciando llamada a DeepSeek con streaming...')
