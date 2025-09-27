@@ -114,11 +114,15 @@ async function sendManyChatMessage(userId: string, message: string) {
       },
       body: JSON.stringify({
         subscriber_id: userId,
-        data: {
-          version: 'v2.0',
+        message: {
+          version: '1.0',
           content: {
-            type: 'text',
-            text: message
+            messages: [
+              {
+                type: 'text',
+                text: message
+              }
+            ]
           }
         }
       })
@@ -160,8 +164,15 @@ serve(async (req) => {
     if (!userMessage.trim()) {
       return new Response(
         JSON.stringify({ 
-          reply: 'No se recibió mensaje. Por favor, envía tu consulta nuevamente.',
-          status: 'error' 
+          version: "1.0",
+          content: {
+            messages: [
+              {
+                type: "text",
+                text: "No se recibió mensaje. Por favor, envía tu consulta nuevamente."
+              }
+            ]
+          }
         }),
         { 
           status: 400, 
@@ -205,8 +216,15 @@ serve(async (req) => {
 
     // Responder inmediatamente a ManyChat para evitar timeout
     const immediateResponse = {
-      reply: "🤖 Procesando tu consulta... Te responderé en un momento.",
-      status: "success"
+      version: "1.0",
+      content: {
+        messages: [
+          {
+            type: "text",
+            text: "🤖 Procesando tu consulta... Te responderé en un momento."
+          }
+        ]
+      }
     }
 
     console.log('📤 Respuesta inmediata para ManyChat:', immediateResponse)
@@ -229,8 +247,15 @@ serve(async (req) => {
     console.error('❌ Error en webhook:', error)
     return new Response(
       JSON.stringify({ 
-        reply: 'Lo siento, ocurrió un error técnico. Por favor, intenta nuevamente.',
-        status: 'error' 
+        version: "1.0",
+        content: {
+          messages: [
+            {
+              type: "text",
+              text: "Lo siento, ocurrió un error técnico. Por favor, intenta nuevamente."
+            }
+          ]
+        }
       }),
       { 
         status: 500, 
