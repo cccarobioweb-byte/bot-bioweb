@@ -111,6 +111,7 @@ serve(async (req) => {
       console.error('❌ Error en chat:', chatError)
     } else {
       botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
+      console.log('🤖 Bot response extraída:', botResponse)
       
       // Acortar respuesta para WhatsApp si es muy larga
       if (botResponse.length > 600) {
@@ -163,8 +164,9 @@ serve(async (req) => {
       status: "success"
     }
 
-    // Respuesta enviada a ManyChat
+    console.log('📤 Respuesta final para ManyChat:', manychatResponse)
 
+    // Respuesta enviada a ManyChat
     return new Response(
       JSON.stringify(manychatResponse),
       { 
