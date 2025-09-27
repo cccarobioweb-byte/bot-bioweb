@@ -107,62 +107,76 @@ serve(async (req) => {
       )
     }
 
-    // Buscar productos relevantes antes de llamar al chat
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .limit(20)
-
-    if (productsError) {
-      console.error('❌ Error buscando productos:', productsError)
-    }
-
-    // Buscar información de marcas relevantes
-    const { data: brandInfo, error: brandError } = await supabase
-      .from('brand_info')
-      .select('*')
-      .eq('is_active', true)
-      .limit(10)
-
-    if (brandError) {
-      console.error('❌ Error buscando información de marcas:', brandError)
-    }
-
-    // Crear prompt específico para WhatsApp (respuestas cortas)
-    const whatsappResponse = await generateWhatsAppResponse(userMessage, products || [], brandInfo || [])
-    console.log('🤖 Respuesta WhatsApp generada:', whatsappResponse)
+    // Usar búsqueda semántica para encontrar productos relevantes
+    let products: any[] = []
+    let brandInfo: any[] = []
     
-    // Si no se puede generar respuesta específica, usar chat normal
-    let botResponse = whatsappResponse
-    
-    if (!whatsappResponse || whatsappResponse.length < 10) {
-      console.log('🔄 Usando chat normal para WhatsApp')
-      const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
+    try {
+      const { data: semanticResult, error: semanticError } = await supabase.functions.invoke('semantic-search', {
         body: {
-          message: userMessage,
-          originalMessage: userMessage,
-          chatHistory: [], // ManyChat no mantiene historial, empezamos limpio
-          products: products || [], // Productos encontrados
-          brandInfo: brandInfo || [], // Información de marcas encontrada
-          translationInfo: {
-            wasTranslated: false,
-            detectedLanguage: 'es'
-          },
-          source: 'whatsapp', // Identificar que viene de WhatsApp
-          userInfo: {
-            id: userId,
-            name: userName,
-            phone: phoneNumber
-          }
+          query: userMessage,
+          type: 'both',
+          similarity_threshold: 0.3,
+          max_results: 5,
+          use_cache: true
         }
       })
+
+      if (semanticError) {
+        console.error('❌ Error en búsqueda semántica:', semanticError)
+      } else if (semanticResult?.success && semanticResult.results) {
+        // Separar productos y marcas de los resultados semánticos
+        products = semanticResult.results
+          .filter((result: any) => result.type === 'product')
+          .map((result: any) => result.metadata)
+          .filter(Boolean)
+        
+        brandInfo = semanticResult.results
+          .filter((result: any) => result.type === 'brand')
+          .map((result: any) => result.metadata)
+          .filter(Boolean)
+      }
+    } catch (error) {
+      console.error('❌ Error en búsqueda semántica:', error)
+    }
+
+    // Usar directamente el chat normal (que ya tiene búsqueda semántica)
+    const { data: chatResponse, error: chatError } = await supabase.functions.invoke('chat', {
+      body: {
+        message: userMessage,
+        originalMessage: userMessage,
+        chatHistory: [], // ManyChat no mantiene historial, empezamos limpio
+        products: products || [], // Productos encontrados por búsqueda semántica
+        brandInfo: brandInfo || [], // Información de marcas encontrada
+        translationInfo: {
+          wasTranslated: false,
+          detectedLanguage: 'es'
+        },
+        source: 'whatsapp', // Identificar que viene de WhatsApp
+        userInfo: {
+          id: userId,
+          name: userName,
+          phone: phoneNumber
+        }
+      }
+    })
+    
+    let botResponse = 'Lo siento, no pude procesar tu mensaje.'
+    
+    if (chatError) {
+      console.error('❌ Error en chat:', chatError)
+    } else {
+      botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
       
-      if (chatError) {
-        console.error('❌ Error en chat:', chatError)
-        botResponse = 'Lo siento, no pude procesar tu mensaje.'
-      } else {
-        botResponse = chatResponse?.response || 'Lo siento, no pude procesar tu mensaje.'
+      // Acortar respuesta para WhatsApp si es muy larga
+      if (botResponse.length > 500) {
+        // Buscar la primera recomendación y truncar ahí
+        const firstRecommendation = botResponse.split('**RECOMENDACIÓN')[0]
+        if (firstRecommendation && firstRecommendation.length > 50) {
+          botResponse = firstRecommendation + '\n\n¿Quieres más detalles?'
+        } else {
+          botResponse = botResponse.substring(0, 400) + '...\n\n¿Quieres más detalles?'
+        }
       }
     }
 
@@ -177,7 +191,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     }
 
-    console.log('✅ Respuesta enviada a ManyChat:', manychatResponse)
+    // Respuesta enviada a ManyChat
 
     return new Response(
       JSON.stringify(manychatResponse),

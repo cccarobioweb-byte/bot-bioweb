@@ -4,14 +4,34 @@ import { translateIfNeeded } from './translationService'
 import { getSearchCache, setSearchCache, getChatCache, setChatCache } from './cacheService'
 import { FastChatService } from './fastChatService'
 import { BrandInfoService, type BrandInfo } from './brandInfoService'
+import { EmbeddingService } from './embeddingService'
 
 export class ChatService {
   
   /**
-   * Busca información de marcas relevantes para una consulta
+   * Busca información de marcas relevantes usando búsqueda semántica con fallback
    */
   static async findRelevantBrandInfo(query: string): Promise<BrandInfo[]> {
     try {
+      // 1. Intentar búsqueda semántica primero
+      try {
+        const semanticResult = await EmbeddingService.semanticSearch({
+          query,
+          type: 'brands',
+          similarity_threshold: 0.3,
+          max_results: 3,
+          use_cache: true
+        })
+
+        if (semanticResult.success && semanticResult.results.length > 0) {
+          console.log(`🧠 Búsqueda semántica marcas: ${semanticResult.results.length} encontradas`)
+          return semanticResult.results.map(result => result.metadata).filter(Boolean)
+        }
+      } catch (semanticError) {
+        console.warn('Búsqueda semántica marcas falló, usando fallback:', semanticError)
+      }
+
+      // 2. Fallback a búsqueda tradicional
       const brandInfo = await BrandInfoService.findRelevantBrandInfo(query)
       return brandInfo
     } catch (error) {
@@ -21,7 +41,7 @@ export class ChatService {
   }
 
   /**
-   * Busca productos relevantes en la base de datos con algoritmo optimizado y caché
+   * Busca productos relevantes usando búsqueda semántica con fallback
    */
   static async findRelevantProducts(query: string): Promise<Product[]> {
     try {
@@ -30,7 +50,25 @@ export class ChatService {
         return []
       }
 
-      // Usar búsqueda rápida
+      // 1. Intentar búsqueda semántica primero
+      try {
+        const semanticResult = await EmbeddingService.semanticSearch({
+          query,
+          type: 'products',
+          similarity_threshold: 0.3,
+          max_results: 5,
+          use_cache: true
+        })
+
+        if (semanticResult.success && semanticResult.results.length > 0) {
+          return semanticResult.results.map(result => result.metadata).filter(Boolean)
+        }
+      } catch (semanticError) {
+        console.warn('Búsqueda semántica falló, usando fallback:', semanticError)
+      }
+
+      // 2. Fallback a búsqueda tradicional
+      console.log('🔄 Usando búsqueda tradicional como fallback')
       const products = await FastChatService.findRelevantProducts(query)
       
       return products
@@ -119,7 +157,6 @@ export class ChatService {
         return await this.simpleProductSearch(query, limit)
       }
 
-      console.log(`✅ Búsqueda optimizada: ${data?.length || 0} productos encontrados`)
       return data || []
       
     } catch (error) {
@@ -156,7 +193,6 @@ export class ChatService {
 
       // Si encontramos resultados, devolverlos
       if (data && data.length > 0) {
-        console.log(`✅ Búsqueda directa: ${data.length} productos encontrados`)
         return data
       }
 
@@ -181,7 +217,6 @@ export class ChatService {
         if (keywordError) {
           console.error('Error en búsqueda por keywords:', keywordError)
         } else if (keywordData && keywordData.length > 0) {
-          console.log(`✅ Búsqueda por keywords: ${keywordData.length} productos encontrados`)
           return keywordData
         }
       }
@@ -194,7 +229,6 @@ export class ChatService {
       )
       
       if (foundTerms.length > 0) {
-        console.log('🔍 Términos meteorológicos encontrados:', foundTerms)
         const weatherConditions = foundTerms.map(term => 
           `name.ilike.%${term}%,categoria.ilike.%${term}%,description.ilike.%${term}%`
         ).join(',')
@@ -208,7 +242,6 @@ export class ChatService {
         if (weatherError) {
           console.error('Error en búsqueda meteorológica:', weatherError)
         } else if (weatherData && weatherData.length > 0) {
-          console.log(`✅ Búsqueda meteorológica: ${weatherData.length} productos encontrados`)
           return weatherData
         }
       }

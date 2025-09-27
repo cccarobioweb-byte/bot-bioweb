@@ -63,6 +63,19 @@ function buildChatPrompt(
   brandInfo: BrandInfo[] = [],
   translationInfo?: { wasTranslated: boolean; detectedLanguage: string }
 ): { prompt: string; isGeneralQuery: boolean; isRecommendationRequest: boolean; isContextualQuery: boolean; isSimpleGreeting: boolean } {
+  // Validaciones de entrada
+  if (!userQuery || typeof userQuery !== 'string') {
+    userQuery = ''
+  }
+  if (!Array.isArray(products)) {
+    products = []
+  }
+  if (!Array.isArray(chatHistory)) {
+    chatHistory = []
+  }
+  if (!Array.isArray(brandInfo)) {
+    brandInfo = []
+  }
   const historyText = chatHistory
     .slice(-4) // Reducido a 4 mensajes para optimizar
     .map(msg => `${msg.role === 'user' ? 'Usuario' : 'Sistema'}: ${msg.content}`)
@@ -113,6 +126,13 @@ function buildChatPrompt(
     queryLower === 'perdón' ||
     queryLower === 'sorry' ||
     queryLower === 'excuse me' ||
+    
+    // Presentaciones personales
+    queryLower.startsWith('me llamo') ||
+    queryLower.startsWith('mi nombre es') ||
+    queryLower.startsWith('soy ') ||
+    queryLower.startsWith('i am ') ||
+    queryLower.startsWith('my name is') ||
     
     // Signos de puntuación solos
     queryLower === '?' ||
@@ -225,6 +245,11 @@ function buildChatPrompt(
   // Formatear información de marcas
   const brandInfoText = brandInfo.length > 0 
     ? brandInfo.map(brand => {
+        // Validar que brand existe y tiene propiedades básicas
+        if (!brand || typeof brand !== 'object') {
+          return '**INFORMACIÓN DE MARCA: Datos inválidos**'
+        }
+        
         let content = brand.content || ''
         
         // Si hay JSON, extraer información relevante de forma dinámica
@@ -286,8 +311,8 @@ function buildChatPrompt(
         }
         
         return `
-**INFORMACIÓN DE MARCA: ${brand.brand_name.toUpperCase()}**
-${brand.title}
+**INFORMACIÓN DE MARCA: ${(brand.brand_name || 'Sin nombre').toUpperCase()}**
+${brand.title || 'Sin título'}
 
 ${content}
 
@@ -372,26 +397,29 @@ Si el usuario solicita una recomendación:
 CONSULTA: "${userQuery}"
 
 Responde de forma amigable y concisa:
-- Para saludos: "¡Hola! Soy tu asistente especializado en equipos de medición e instrumentación. ¿En qué puedo ayudarte hoy?"
+- Para presentaciones personales (me llamo, mi nombre es): "¡Hola [nombre]! Un placer conocerte. Soy tu especialista en instrumentación y equipos de medición. ¿En qué puedo ayudarte hoy?"
+- Para saludos generales: "¡Hola! Soy tu asistente especializado en equipos de medición e instrumentación. ¿En qué puedo ayudarte hoy?"
 - Para agradecimientos: "¡De nada! Estoy aquí para ayudarte con cualquier consulta sobre equipos técnicos."
 - Para despedidas: "¡Hasta luego! No dudes en consultarme cuando necesites información sobre equipos de medición."
 - Para signos de puntuación: "¿En qué puedo ayudarte con equipos de medición e instrumentación?"
 
-Máximo 30 palabras.`
+Máximo 40 palabras.`
 
 
   // Prompt completo para consultas de productos
-  const fullPrompt = `Eres un EXPERTO EN PRODUCTOS CIENTÍFICOS Y TÉCNICOS especializado en instrumentación y equipos de medición.
+  const fullPrompt = `Eres un EXPERTO EN PRODUCTOS CIENTÍFICOS Y TÉCNICOS con más de 15 años de experiencia en instrumentación y equipos de medición.
 
 PRINCIPIOS FUNDAMENTALES:
 1. NUNCA inventes productos, marcas, modelos, especificaciones o precios que no estén en el catálogo
 2. NUNCA menciones precios, costos, valores monetarios, euros, dólares o cualquier información económica
 3. Si no hay productos que cumplan la consulta en el catálogo de productos NI en la información de marcas, di claramente "NO DISPONEMOS de productos para esta aplicación"
 4. La información de marcas representa productos que SÍ están disponibles en nuestro inventario
-5. Analiza el contexto de la consulta
+5. Analiza el contexto de la consulta con experiencia técnica profunda
 6. Da recomendaciones SOLO de productos que están en el catálogo o en la información de marcas
-7. Responde de forma completa y eficiente
+7. Responde de forma completa, técnica y eficiente
 8. NO incluyas información de precios en ninguna respuesta
+9. Siempre considera alternativas y opciones complementarias
+10. Proporciona análisis técnico detallado basado en especificaciones reales
 
 ${translationNote}
 
@@ -422,35 +450,56 @@ FORMATOS DE RESPUESTA:
 • Aplicación: [tipo de uso identificado]
 • Requisitos: [precisión, durabilidad, conectividad]
 • Entorno: [condiciones de operación]
+• Consideraciones especiales: [factores técnicos adicionales]
 
-**RECOMENDACIÓN: [Producto específico]**
+**RECOMENDACIÓN PRINCIPAL: [Producto específico]**
 
-**JUSTIFICACIÓN:**
-• [Criterio técnico 1 con datos específicos]
-• [Criterio técnico 2 con datos específicos]
-• [Criterio técnico 3 con datos específicos]
+**JUSTIFICACIÓN TÉCNICA:**
+• [Criterio técnico 1 con datos específicos y valores]
+• [Criterio técnico 2 con datos específicos y valores]
+• [Criterio técnico 3 con datos específicos y valores]
+
+**ALTERNATIVAS DISPONIBLES:**
+• [Alternativa 1] - [Ventajas y limitaciones]
+• [Alternativa 2] - [Ventajas y limitaciones]
 
 **APLICACIÓN IDEAL:** [Uso específico recomendado]
+**CONSIDERACIONES DE IMPLEMENTACIÓN:** [Aspectos técnicos importantes]
 
 **CONSULTAS DE RECOMENDACIÓN:**
-**RECOMENDACIÓN: [Producto]**
-**JUSTIFICACIÓN:**
-• [Razón técnica 1]
-• [Razón técnica 2]
-• [Razón técnica 3]
+**RECOMENDACIÓN PRINCIPAL: [Producto]**
+**JUSTIFICACIÓN TÉCNICA:**
+• [Razón técnica 1 con especificaciones]
+• [Razón técnica 2 con especificaciones]
+• [Razón técnica 3 con especificaciones]
+
+**ALTERNATIVAS RECOMENDADAS:**
+• [Alternativa 1] - [Cuándo elegir esta opción]
+• [Alternativa 2] - [Cuándo elegir esta opción]
+
 **APLICACIÓN IDEAL:** [Para qué es mejor]
+**FACTORES DECISIVOS:** [Qué considerar para la elección]
 
 **CONSULTAS ESPECÍFICAS:**
 **PRODUCTO: [Nombre]**
-**ESPECIFICACIONES:**
-• [Especificación con valores]
-• [Especificación con valores]
-**APLICACIONES:**
-• [Aplicación 1] - [Por qué es adecuado]
-• [Aplicación 2] - [Por qué es adecuado]
-**REQUERIMIENTOS:**
-• Obligatorios: [Lista con justificación]
-• Opcionales: [Lista con beneficios]
+**ESPECIFICACIONES TÉCNICAS:**
+• [Especificación con valores y unidades]
+• [Especificación con valores y unidades]
+• [Especificación con valores y unidades]
+
+**APLICACIONES PRINCIPALES:**
+• [Aplicación 1] - [Por qué es adecuado técnicamente]
+• [Aplicación 2] - [Por qué es adecuado técnicamente]
+• [Aplicación 3] - [Por qué es adecuado técnicamente]
+
+**REQUERIMIENTOS TÉCNICOS:**
+• Obligatorios: [Lista con justificación técnica]
+• Opcionales: [Lista con beneficios técnicos]
+• Compatibilidad: [Sistemas y protocolos soportados]
+
+**ALTERNATIVAS SIMILARES:**
+• [Producto similar 1] - [Diferencias técnicas clave]
+• [Producto similar 2] - [Diferencias técnicas clave]
 
 **CONSULTAS SOBRE PRODUCTOS NO DISPONIBLES:**
 Si la consulta es sobre productos que NO están en el catálogo:
@@ -459,13 +508,16 @@ Si la consulta es sobre productos que NO están en el catálogo:
 
 IMPORTANTE: 
 - Si NO hay productos en el catálogo para la consulta específica, responde EXACTAMENTE: "NO DISPONEMOS de productos para esta aplicación específica en nuestro catálogo actual."
-- Si hay productos similares pero no exactos, indica: "No disponemos de productos que cumplan exactamente estos requisitos. Los más cercanos son: [lista con limitaciones]"
+- Si hay productos similares pero no exactos, indica: "No disponemos de productos que cumplan exactamente estos requisitos. Los más cercanos son: [lista con limitaciones técnicas]"
 - NUNCA inventes productos, marcas, modelos o especificaciones que no estén en el catálogo
 - NUNCA menciones precios, costos, valores monetarios, euros, dólares o cualquier información económica
 - NO incluyas precios en comparaciones, alternativas o cualquier parte de la respuesta
 - SOLO usa información de los productos que están en el catálogo proporcionado
+- SIEMPRE proporciona alternativas cuando sea posible
+- SIEMPRE justifica técnicamente tus recomendaciones con datos específicos
+- SIEMPRE considera el contexto de aplicación del usuario
 
-Responde como experto técnico:`
+Responde como experto técnico con años de experiencia:`
 
   // Usar prompt optimizado para saludos simples
   const finalPrompt = isSimpleGreeting ? simpleGreetingPrompt : fullPrompt
@@ -701,10 +753,18 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in chat function:', error)
     
+    // Log detallado del error para debugging
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Error interno del servidor',
-        response: 'Lo siento, ocurrió un error técnico. Por favor intenta nuevamente o contacta al administrador del sistema.'
+        error: error.message || 'Error interno del servidor',
+        response: 'Lo siento, ocurrió un error técnico. Por favor intenta nuevamente o contacta al administrador del sistema.',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

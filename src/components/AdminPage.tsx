@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Package, BarChart3, Info } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, BarChart3, Info, Brain } from 'lucide-react'
 import { type Product } from '../lib/supabase'
 import { AdminService, type CreateProductData } from '../services/adminService'
 import { OptimizedSearchService } from '../services/optimizedSearchService'
@@ -10,11 +10,12 @@ import HtmlPreview from './HtmlPreview'
 import AutocompleteInput from './AutocompleteInput'
 import TagsInput from './TagsInput'
 import BrandInfoAdmin from './BrandInfoAdmin'
+import EmbeddingGenerator from './EmbeddingGenerator'
 
 const AdminPage: React.FC = () => {
   const PRODUCTS_PER_PAGE = 10
   
-  const [activeTab, setActiveTab] = useState<'products' | 'brands'>('products')
+  const [activeTab, setActiveTab] = useState<'products' | 'brands' | 'embeddings'>('products')
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -123,7 +124,6 @@ const AdminPage: React.FC = () => {
       const result = await AdminService.getProducts(1, 100)
       setProducts(result.products || [])
       setFilteredProducts(result.products || []) // Inicializar productos filtrados
-      console.log('Productos cargados:', result.products?.length || 0)
     } catch (error) {
       console.error('Error loading products:', error)
       showError('Error al cargar productos')
@@ -242,15 +242,21 @@ const AdminPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               {activeTab === 'products' ? (
                 <Package className="w-8 h-8 text-blue-500" />
-              ) : (
+              ) : activeTab === 'brands' ? (
                 <Info className="w-8 h-8 text-purple-500" />
+              ) : (
+                <Brain className="w-8 h-8 text-green-500" />
               )}
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {activeTab === 'products' ? 'Administración de Productos' : 'Administración de Marcas'}
+                  {activeTab === 'products' ? 'Administración de Productos' : 
+                   activeTab === 'brands' ? 'Administración de Marcas' : 
+                   'Sistema de Embeddings'}
                 </h1>
                 <p className="text-gray-600">
-                  {activeTab === 'products' ? 'Gestiona el catálogo para el chatbot' : 'Gestiona información detallada de marcas'}
+                  {activeTab === 'products' ? 'Gestiona el catálogo para el chatbot' : 
+                   activeTab === 'brands' ? 'Gestiona información detallada de marcas' :
+                   'Genera embeddings semánticos para búsquedas inteligentes'}
                 </p>
               </div>
             </div>
@@ -289,6 +295,17 @@ const AdminPage: React.FC = () => {
             >
               <Info className="w-4 h-4" />
               <span>Información de Marcas</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('embeddings')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'embeddings'
+                  ? 'bg-white text-green-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Brain className="w-4 h-4" />
+              <span>Embeddings</span>
             </button>
           </div>
 
@@ -620,8 +637,12 @@ const AdminPage: React.FC = () => {
           />
         ))}
           </>
-        ) : (
+        ) : activeTab === 'brands' ? (
           <BrandInfoAdmin />
+        ) : (
+          <div className="space-y-6">
+            <EmbeddingGenerator />
+          </div>
         )}
 
         {/* Diálogo de confirmación */}

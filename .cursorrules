@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "description": "Nunca ejecutar `npm run dev` ni comandos de servidor.",
+      "patterns": ["*"],
+      "action": "deny"
+    },
+    {
+      "description": "Antes de modificar código, analizar primero y pedir confirmación al usuario.",
+      "patterns": ["*"],
+      "action": "analyze_first"
+    },
+    {
+      "description": "Las respuestas deben ser cortas, precisas y sin rodeos.",
+      "patterns": ["*"],
+      "action": "concise"
+    },
+    {
+      "description": "Todo código generado debe estar ordenado, limpio y con buena indentación.",
+      "patterns": ["*.js", "*.ts", "*.tsx", "*.jsx", "*.json", "*.html", "*.css"],
+      "action": "format_code"
+    },
+    {
+      "description": "De vez en cuando revisar todo el proyecto rápidamente para refrescar el contexto.",
+      "patterns": ["*"],
+      "action": "quick_project_review"
+    }
+  ]
+}
